@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/tflite_service.dart';
 import '../utils/constants.dart';
+import '../widgets/neural_pulse_loader.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 double getOffsetForChar(String char) {
@@ -31,7 +32,6 @@ class LayoutControl {
 }
 
 final Map<String, LayoutControl> kLayoutControls = {
-  
   'ا': const LayoutControl(scale: 1.3, offsetY: 40),    
   'ب': const LayoutControl(scale: 1.2, offsetY: 40),    
   'ت': const LayoutControl(scale: 1.2, offsetY: 30),    
@@ -115,7 +115,7 @@ class WatermarkConfig {
 
 class DrawingScreen extends StatefulWidget {
   final String? targetLetter; 
-  final List<String>? customLetterList; // Tambahan untuk antrean spesifik
+  final List<String>? customLetterList;
   
   const DrawingScreen({super.key, this.targetLetter, this.customLetterList});
 
@@ -123,7 +123,7 @@ class DrawingScreen extends StatefulWidget {
   State<DrawingScreen> createState() => _DrawingScreenState();
 }
 
-class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProviderStateMixin {
+class _DrawingScreenState extends State<DrawingScreen> {
   final SignatureController _controller = SignatureController(
     penStrokeWidth: 12, 
     penColor: Colors.black,
@@ -136,8 +136,7 @@ class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProvider
   ];
   
   late String _currentLetter; 
-  late List<String> _activeList; // Menyimpan antrean huruf yang sedang aktif
-  late AnimationController _scannerController; 
+  late List<String> _activeList; 
   final TFLiteService _tfliteService = TFLiteService();
   final GlobalKey _canvasKey = GlobalKey(); 
   
@@ -152,7 +151,6 @@ class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProvider
         : _hijaiahList;
     _currentLetter = widget.targetLetter ?? _activeList.first; 
     _initModel();
-    _scannerController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
   }
 
   Future<void> _initModel() async {
@@ -163,7 +161,6 @@ class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProvider
     }
   }
 
-  // --- REVISI: NAVIGASI MENGGUNAKAN _activeList BUKAN _hijaiahList ---
   void _prevLetter() {
     HapticFeedback.lightImpact(); 
     int currentIndex = _activeList.indexOf(_currentLetter);
@@ -296,16 +293,28 @@ class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProvider
   }
 
   Future<void> _classify() async {
-    if (_controller.isEmpty) return;
+    if (_controller.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kanvas masih kosong! Yuk, tulis huruf hijaiahmu dulu di sini. ✨'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
     if (_controller.points.length < 40) { 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Goresan terlalu pendek. Yuk, tulis yang jelas!'), backgroundColor: Colors.orange));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Goresan terlalu pendek. Yuk, tulis yang jelas!'),
+      backgroundColor: Colors.orange,
+      duration: Duration(seconds: 2)
+      ),
+    );
       return;
     }
     
     setState(() { _isLoading = true; _hideWatermark = true; });
     HapticFeedback.mediumImpact(); 
-    _scannerController.repeat(reverse: true); 
     await Future.delayed(const Duration(milliseconds: 100)); 
 
     RenderRepaintBoundary boundary = _canvasKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
@@ -318,7 +327,6 @@ class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProvider
         final rawResult = await _tfliteService.classifyImage(bytes);
         
         setState(() { _isLoading = false; _hideWatermark = false; });
-        _scannerController.stop(); 
 
         if (!mounted) return;
 
@@ -362,7 +370,6 @@ class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProvider
         if (starsEarned == 3) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('mastered_$char', true);
-          // HapticFeedback.vibrate(); dihapus sesuai permintaan
         } else {
           HapticFeedback.lightImpact();
         }
@@ -372,7 +379,6 @@ class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProvider
     } catch (e) {
       debugPrint("Error inferensi: $e");
       setState(() { _isLoading = false; _hideWatermark = false; });
-      _scannerController.stop(); 
     }
   }
 
@@ -633,136 +639,140 @@ class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProvider
             ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
-        child: Column(
-          children: [
-            AspectRatio(
-              aspectRatio: 1.0,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(30), border: Border.all(color: kSecondaryColor, width: 6),
-                  boxShadow: [BoxShadow(color: kSecondaryColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Stack(
-                    children: [
-                      RepaintBoundary(
-                        key: _canvasKey,
-                        child: Container(
-                          color: Colors.white,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              if (widget.targetLetter != null && !_hideWatermark)
-                                Transform.translate(
-                                  offset: Offset(0, config.offsetY), 
-                                  child: Transform.scale(
-                                    scale: config.scale, 
-                                    child: Container(
-                                      padding: const EdgeInsets.all(24.0), 
-                                      alignment: Alignment.center,
-                                      child: SvgPicture.asset(
-                                        config.imagePath, 
-                                        fit: BoxFit.contain,
+      
+      // PERHATIKAN: Bagian ini sudah diubah menggunakan Stack
+      body: Stack(
+        children: [
+          // Lapis Bawah: Layar Utama Drawing kamu
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
+            child: Column(
+              children: [
+                AspectRatio(
+                  aspectRatio: 1.0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white, borderRadius: BorderRadius.circular(30), border: Border.all(color: kSecondaryColor, width: 6),
+                      boxShadow: [BoxShadow(color: kSecondaryColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Stack(
+                        children: [
+                          RepaintBoundary(
+                            key: _canvasKey,
+                            child: Container(
+                              color: Colors.white,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  if (widget.targetLetter != null && !_hideWatermark)
+                                    Transform.translate(
+                                      offset: Offset(0, config.offsetY), 
+                                      child: Transform.scale(
+                                        scale: config.scale, 
+                                        child: Container(
+                                          padding: const EdgeInsets.all(24.0), 
+                                          alignment: Alignment.center,
+                                          child: SvgPicture.asset(
+                                            config.imagePath, 
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                              Signature(controller: _controller, backgroundColor: Colors.transparent),
-                            ],
+                                  Signature(controller: _controller, backgroundColor: Colors.transparent),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                          // Animasi scanner lama (AnimatedBuilder) sudah dihapus dari sini!
+                        ],
                       ),
-                      if (_isLoading)
-                        AnimatedBuilder(
-                          animation: _scannerController,
-                          builder: (context, child) {
-                            return Positioned(
-                              top: _scannerController.value * 290, left: 0, right: 0,
-                              child: Container(height: 4, decoration: BoxDecoration(color: kPrimaryColor, boxShadow: [BoxShadow(color: kPrimaryColor.withOpacity(0.6), blurRadius: 12, spreadRadius: 3)])),
-                            );
-                          },
-                        ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16), 
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () { HapticFeedback.lightImpact(); setState(() => _controller.undo()); },
+                      icon: const Icon(Icons.undo, color: Colors.orange),
+                      label: const Text('Undo', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                    ),
+                    
+                    if (widget.targetLetter != null) ...[
+                      const SizedBox(width: 16),
+                      TextButton.icon(
+                        onPressed: _showLetterGuideSheet,
+                        icon: const Icon(Icons.menu_book_rounded, color: Colors.blue),
+                        label: const Text('Panduan', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+
+                    const SizedBox(width: 16), 
+                    TextButton.icon(
+                      onPressed: () { HapticFeedback.mediumImpact(); setState(() => _controller.clear()); },
+                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                      label: const Text('Hapus', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  width: double.infinity, height: 55,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _classify,
+                    icon: const Icon(Icons.auto_awesome_rounded, size: 24),
+                    label: const Text('Cek Hurufku!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimaryColor, foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+
+                Container(
+                  width: double.infinity, padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.amber.shade200, width: 2),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.lightbulb_rounded, color: Colors.orange, size: 24),
+                          const SizedBox(width: 8),
+                          Text('Tips Menulis', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.orange.shade800)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTipItem('1', 'Gunakan jari atau Stylus Pen.'),
+                      const SizedBox(height: 8),
+                      _buildTipItem('2', 'Gambar mulai dari sisi kanan ke kiri.'),
+                      const SizedBox(height: 8),
+                      _buildTipItem('3', 'Ikuti garis titik-titik dengan teliti.'),
+                      const SizedBox(height: 8),
+                      _buildTipItem('4', 'Pastikan goresan menyambung dengan titik selanjutnya.'),
                     ],
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16), 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton.icon(
-                  onPressed: () { HapticFeedback.lightImpact(); setState(() => _controller.undo()); },
-                  icon: const Icon(Icons.undo, color: Colors.orange),
-                  label: const Text('Undo', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-                ),
-                
-                if (widget.targetLetter != null) ...[
-                  const SizedBox(width: 16),
-                  TextButton.icon(
-                    onPressed: _showLetterGuideSheet,
-                    icon: const Icon(Icons.menu_book_rounded, color: Colors.blue),
-                    label: const Text('Panduan', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-
-                const SizedBox(width: 16), 
-                TextButton.icon(
-                  onPressed: () { HapticFeedback.mediumImpact(); setState(() => _controller.clear()); },
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                  label: const Text('Hapus', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                ),
+                const SizedBox(height: 20),
               ],
             ),
-            const SizedBox(height: 16),
-
-            SizedBox(
-              width: double.infinity, height: 55,
-              child: ElevatedButton.icon(
-                onPressed: _isLoading ? null : _classify,
-                icon: const Icon(Icons.auto_awesome_rounded, size: 24),
-                label: const Text('Cek Hurufku!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimaryColor, foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
+          ),
+          
+          // Lapis Atas: Menutup layar dengan KidsAnalyzerLoader saat tombol Cek dipencet
+          if (_isLoading)
+            const Positioned.fill(
+              child: KidsAnalyzerLoader(message: "Wah, sedang diperiksa..."),
             ),
-            const Spacer(),
-
-            Container(
-              width: double.infinity, padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.amber.shade200, width: 2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.lightbulb_rounded, color: Colors.orange, size: 24),
-                      const SizedBox(width: 8),
-                      Text('Tips Menulis', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.orange.shade800)),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTipItem('1', 'Gunakan jari atau Stylus Pen.'),
-                  const SizedBox(height: 8),
-                  _buildTipItem('2', 'Gambar mulai dari sisi kanan ke kiri.'),
-                  const SizedBox(height: 8),
-                  _buildTipItem('3', 'Ikuti garis titik-titik dengan teliti.'),
-                  const SizedBox(height: 8),
-                  _buildTipItem('4', 'Pastikan goresan menyambung dengan titik selanjutnya.'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -779,7 +789,8 @@ class _DrawingScreenState extends State<DrawingScreen> with SingleTickerProvider
 
   @override
   void dispose() {
-    _controller.dispose(); _tfliteService.dispose(); _scannerController.dispose(); 
+    _controller.dispose(); 
+    _tfliteService.dispose(); 
     super.dispose();
   }
 }

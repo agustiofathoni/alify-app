@@ -202,7 +202,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     _buildMenuCard(
                       context: context,
                       title: 'Rapor Pintar',
-                      subtitle: 'Lihat koleksi bintang emasmu!',
+                      subtitle: 'Lihat grafik pencapaian belajarmu!',
                       imagePath: 'assets/images/menu_rapor.png', 
                       btnColor: Colors.green,
                       onTap: () {

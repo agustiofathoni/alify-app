@@ -130,7 +130,7 @@ class _RaporScreenState extends State<RaporScreen> {
                 builder: (context) => AlertDialog(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   title: const Text('Reset Progres?'),
-                  content: const Text('Semua bintang emas akan hilang dan progres kembali dari awal. Yakin?'),
+                  content: const Text('Semua grafik pencapaian akan dihapus dan progres kembali dari awal. Yakin?'),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
                     TextButton(
@@ -206,28 +206,34 @@ class _RaporScreenState extends State<RaporScreen> {
                         children: [
                           const Icon(Icons.verified_rounded, color: Colors.green),
                           const SizedBox(width: 8),
-                          Text('Sangat Dikuasai (${_masteredLetters.length})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2B2D42))),
+                          Text('Sudah Dikuasai (${_masteredLetters.length})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2B2D42))),
                         ],
                       ),
                       const SizedBox(height: 12),
                       if (_masteredLetters.isEmpty)
                         _buildEmptyState('Belum ada huruf yang dikuasai.\nAyo latihan lebih banyak lagi!', Colors.green.shade50)
                       else
-                        Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 0.85,
+                        SizedBox(
+                          width: double.infinity,
+                          child: Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: Wrap(
+                              alignment: WrapAlignment.center, // Membuat sisa kotak otomatis di tengah
+                              spacing: 16, // Jarak horizontal antar kotak
+                              runSpacing: 16, // Jarak vertikal antar baris
+                              children: _masteredLetters.map((char) {
+                                double screenWidth = MediaQuery.of(context).size.width;
+                                double itemWidth = (screenWidth - 48 - 32) / 3; 
+                                
+                                return SizedBox(
+                                  width: itemWidth,
+                                  child: AspectRatio(
+                                    aspectRatio: 0.85, 
+                                    child: _buildLetterChip(context, char, true),
+                                  ),
+                                );
+                              }).toList(),
                             ),
-                            itemCount: _masteredLetters.length,
-                            itemBuilder: (context, index) {
-                              return _buildLetterChip(context, _masteredLetters[index], true);
-                            },
                           ),
                         ),
                       
@@ -244,21 +250,27 @@ class _RaporScreenState extends State<RaporScreen> {
                       if (_needPracticeLetters.isEmpty)
                         _buildEmptyState('Hebat! Kamu sudah menguasai semua huruf.', Colors.orange.shade50)
                       else
-                        Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 0.85,
+                        SizedBox(
+                          width: double.infinity,
+                          child: Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: Wrap(
+                              alignment: WrapAlignment.center, // Membuat sisa kotak otomatis di tengah
+                              spacing: 16, 
+                              runSpacing: 16, 
+                              children: _needPracticeLetters.map((char) {
+                                double screenWidth = MediaQuery.of(context).size.width;
+                                double itemWidth = (screenWidth - 48 - 32) / 3; 
+                                
+                                return SizedBox(
+                                  width: itemWidth,
+                                  child: AspectRatio(
+                                    aspectRatio: 0.85, 
+                                    child: _buildLetterChip(context, char, false),
+                                  ),
+                                );
+                              }).toList(),
                             ),
-                            itemCount: _needPracticeLetters.length,
-                            itemBuilder: (context, index) {
-                              return _buildLetterChip(context, _needPracticeLetters[index], false);
-                            },
                           ),
                         ),
                       
@@ -302,73 +314,67 @@ class _RaporScreenState extends State<RaporScreen> {
   }
 
   Widget _buildLetterChip(BuildContext context, String char, bool isMastered) {
-  String name = _kHijaiahNames[char] ?? '';
-  
-  // Daftar huruf yang punya lengkungan ke bawah
-  // bool hasDescender = ['ج', 'ح', 'خ', 'ع', 'غ', 'م'].contains(char);
-
-  return Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DrawingScreen(
-              targetLetter: char,
-              customLetterList: isMastered ? _masteredLetters : _needPracticeLetters,
-            ),
-          ),
-        ).then((_) {
-          setState(() { _isLoading = true; });
-          _loadProgressData();
-        });
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: isMastered ? Colors.green.shade50 : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isMastered ? Colors.green.shade200 : Colors.grey.shade300, width: 2),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Padding atas tambahan jika ada lengkungan bawah
-          SizedBox(
-            height: 60, 
-            child: Center(
-              child: Text(
-                char,
-                style: TextStyle(
-                  fontFamily: 'Amiri',
-                  fontSize: 45,
-                  fontWeight: FontWeight.bold,
-                  color: isMastered ? Colors.green.shade700 : const Color(0xFF2B2D42),
-                  height: 1.0,
-                ),
+    String name = _kHijaiahNames[char] ?? '';
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DrawingScreen(
+                targetLetter: char,
+                customLetterList: isMastered ? _masteredLetters : _needPracticeLetters,
               ),
             ),
+          ).then((_) {
+            setState(() { _isLoading = true; });
+            _loadProgressData();
+          });
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: isMastered ? Colors.green.shade50 : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isMastered ? Colors.green.shade200 : Colors.grey.shade300, width: 2),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+            ],
           ),
-            const SizedBox(height: 4),
-    
-          // 3. NAMA HURUF
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: isMastered ? Colors.green.shade700 : Colors.grey.shade500,
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                height: 60, 
+                child: Center(
+                  child: Text(
+                    char,
+                    style: TextStyle(
+                      fontFamily: 'Amiri',
+                      fontSize: 45,
+                      fontWeight: FontWeight.bold,
+                      color: isMastered ? Colors.green.shade700 : const Color(0xFF2B2D42),
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                name,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: isMastered ? Colors.green.shade700 : Colors.grey.shade500,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-      ),
-    ),
-  );
-}
+    );
+  }
 }
