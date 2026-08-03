@@ -13,13 +13,16 @@ class MenuScreen extends StatefulWidget {
   State<MenuScreen> createState() => _MenuScreenState();
 }
 
-class _MenuScreenState extends State<MenuScreen> {
+class _MenuScreenState extends State<MenuScreen> with WidgetsBindingObserver {
   late AudioPlayer _bgmPlayer;
   bool _isMusicPlaying = true;
+
+
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bgmPlayer = AudioPlayer();
     _startBgm();
   }
@@ -46,8 +49,26 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _bgmPlayer.dispose(); // Mematikan musik saat keluar dari memori
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Jika tombol Power ditekan (layar mati) atau aplikasi di-minimize ke background
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _bgmPlayer.pause();
+    } 
+    // Jika layar HP dinyalakan lagi dan aplikasi dibuka kembali
+    else if (state == AppLifecycleState.resumed) {
+      // Hanya lanjutkan lagu JIKA status musik di aplikasi memang sedang ON
+      if (_isMusicPlaying) {
+        _bgmPlayer.resume();
+      }
+    }
   }
 
   @override
@@ -155,11 +176,11 @@ class _MenuScreenState extends State<MenuScreen> {
               ),
               Text(
                 'Belajar Huruf Hijaiah Sambung',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade500),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
               ),
               
               const SizedBox(height: 16),
-              Container(height: 3, width: 80, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
+              Container(height: 3, width: 80, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(10))),
               const SizedBox(height: 20),
 
               // --- DAFTAR MENU UTAMA ---
@@ -256,7 +277,7 @@ class _MenuScreenState extends State<MenuScreen> {
               const SizedBox(height: 24),
               const Text(
                 'KARYA TUGAS AKHIR (SKRIPSI)',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 135, 135, 135), letterSpacing: 1.0),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -334,7 +355,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade500),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(

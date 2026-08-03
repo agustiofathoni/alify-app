@@ -37,6 +37,7 @@ dependencies:
   shared_preferences: ^2.5.5
   audioplayers: ^5.2.1
   confetti: ^0.8.0
+  vibration: ^3.2.0
 
 
   
@@ -49,7 +50,7 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: assets/images/icon_app.png
+  image_path: assets/images/icon_app_android.png
   main_sdk_android: 21
 
   # The following adds the Cupertino Icons font to your application.
@@ -72,6 +73,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/models/model_id_9.tflite
+    # - assets/models/model_id_5.tflite
     - assets/models/labels.json
 
     - assets/images/icon_awal.png
@@ -80,6 +82,7 @@ flutter:
     - assets/images/menu_belajar.png
     - assets/images/menu_tebak.png
     - assets/images/menu_rapor.png
+    - assets/images/icon_app_android.png
 
     - assets/sounds/bell.mp3
     - assets/sounds/theme_song.mp3

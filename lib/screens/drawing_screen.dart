@@ -10,6 +10,7 @@ import '../services/tflite_service.dart';
 import '../utils/constants.dart';
 import '../widgets/neural_pulse_loader.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:vibration/vibration.dart';
 
 double getOffsetForChar(String char) {
   if (['ج', 'ح', 'خ', 'ع', 'غ', 'م', 'ن', 'ي', 'ق', 'ش', 'س', 'ص', 'ض'].contains(char)) {
@@ -71,12 +72,12 @@ class LetterGuide {
 }
 
 final Map<String, LetterGuide> kLetterGuides = {
-  'ا': const LetterGuide('ا', 'ـا', 'ـاب', 'Alif adalah huruf "Egois". Dia hanya mau disambung dari kanan, tapi menolak menyambung ke huruf setelahnya (kiri).'),
-  'د': const LetterGuide('د', 'ـد', 'ـدب', 'Dal adalah huruf "Egois". Dia menolak disambung ke kiri! Perhatikan tanda putus dengan huruf Ba setelahnya.'),
-  'ذ': const LetterGuide('ذ', 'ـذ', 'ـذب', 'Dzal juga huruf "Egois". Ingat, dia tidak mau bersambung ke kiri.'),
-  'ر': const LetterGuide('ر', 'ـر', 'ـرب', 'Ra adalah huruf "Egois". Dia hanya mau menerima sambungan dari kanan.'),
-  'ز': const LetterGuide('ز', 'ـز', 'ـزب', 'Zai adalah huruf "Egois". Dia tidak bersambung ke huruf setelahnya.'),
-  'و': const LetterGuide('و', 'ـو', 'ـوب', 'Wau adalah huruf "Egois" terakhir! Dia tidak mau disambung ke kiri.'),
+  'ا': const LetterGuide('ا', 'ـا', 'ـاب', 'Alif adalah huruf "Pemalu". Dia mau bergandengan dengan teman di sebelah kanan, tapi tidak mau bergandengan dengan teman di sebelah kirinya.'),
+  'د': const LetterGuide('د', 'ـد', 'ـدب', 'Dal adalah huruf "Pemalu". Dia mau bergandengan dengan teman di sebelah kanan, tapi tidak mau bergandengan dengan teman di sebelah kirinya.'),
+  'ذ': const LetterGuide('ذ', 'ـذ', 'ـذب', 'Dzal juga huruf "Pemalu". Dia mau bergandengan dengan teman di sebelah kanan, tapi tidak mau bergandengan dengan teman di sebelah kirinya.'),
+  'ر': const LetterGuide('ر', 'ـر', 'ـرب', 'Ra adalah huruf "Pemalu". Dia mau bergandengan dengan teman di sebelah kanan, tapi tidak mau bergandengan dengan teman di sebelah kirinya.'),
+  'ز': const LetterGuide('ز', 'ـز', 'ـزب', 'Zai adalah huruf "Pemalu". Dua mau bergandengan dengan teman di sebelah kanan, tapi tidak mau bergandengan dengan teman di sebelah kirinya.'),
+  'و': const LetterGuide('و', 'ـو', 'ـوب', 'Wau adalah huruf "Pemalu". Dia mau bergandengan dengan teman di sebelah kanan, tapi tidak mau bergandengan dengan teman di sebelah kirinya.'),
   'ب': const LetterGuide('بـ', 'ـبـ', 'ـب', 'Ba adalah huruf "Ramah". Dia bisa bersambung dengan huruf di kanan maupun di kirinya.'),
   'ت': const LetterGuide('تـ', 'ـتـ', 'ـت', 'Ta adalah huruf "Ramah" yang bisa bersambung ke dua sisi.'),
   'ث': const LetterGuide('ثـ', 'ـثـ', 'ـث', 'Tsa juga huruf "Ramah" yang siap bersambung ke dua sisi.'),
@@ -179,6 +180,12 @@ class _DrawingScreenState extends State<DrawingScreen> {
     final guide = kLetterGuides[_currentLetter]; 
     final letterName = kHijaiahNames[_currentLetter] ?? '';
 
+    // Daftar huruf nonsambung (pemalu/egois)
+    final List<String> hurufNonsambung = ['ا', 'د', 'ذ', 'ر', 'ز', 'و'];
+    
+    // Cek apakah huruf saat ini termasuk dalam daftar huruf nonsambung
+    final bool isNonsambung = hurufNonsambung.contains(_currentLetter);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -200,6 +207,7 @@ class _DrawingScreenState extends State<DrawingScreen> {
               if (guide == null)
                 const Text('Panduan untuk huruf ini sedang disiapkan!', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
               else ...[
+                // Kotak Aturan Utama
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blue.shade100)),
@@ -213,6 +221,7 @@ class _DrawingScreenState extends State<DrawingScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // Ilustrasi Awalan, Tengah, Akhiran
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -221,6 +230,35 @@ class _DrawingScreenState extends State<DrawingScreen> {
                     _buildFormCard('Awalan', guide.awalan),
                   ],
                 ),
+                
+                // ==========================================
+                // DISCLAIMER HANYA UNTUK HURUF NONSAMBUNG
+                // ==========================================
+                if (isNonsambung) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.lightbulb_outline_rounded, color: Colors.orange.shade800, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Disclaimer: Huruf Ba (ب) pada contoh di atas digunakan sebagai huruf perantara standar. Tujuannya untuk memperjelas bentuk huruf $letterName yang menolak disambung ke kiri.',
+                            style: TextStyle(color: Colors.orange.shade900, fontSize: 13, fontWeight: FontWeight.w500, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                // ==========================================
               ],
               const SizedBox(height: 32),
               SizedBox(
@@ -254,8 +292,20 @@ class _DrawingScreenState extends State<DrawingScreen> {
     );
   }
 
-  void _showWarningDialog(String title, String message, IconData icon, Color color) {
-    HapticFeedback.vibrate(); 
+  // UNTUK ANDROID (GETARAN SAAT TERDETEKSI SALAH)
+  void _showWarningDialog(String title, String message, IconData icon, Color color) async {
+  // Mengecek apakah perangkat keras memiliki motor getar, lalu paksa getar 200 ms
+  bool? hasVibrator = await Vibration.hasVibrator();
+  if (hasVibrator == true) {
+    Vibration.vibrate(duration: 500, amplitude: 128); 
+  } 
+
+  // // UNTUK iOS (GETARAN SAAT TERDETEKSI SALAH)
+  // void _showWarningDialog(String title, String message, IconData icon, Color color) {
+  //   // Menggunakan HapticFeedback bawaan Flutter untuk getaran kuat
+  //   HapticFeedback.vibrate(); 
+
+
     
     showDialog(
       context: context,
@@ -294,6 +344,9 @@ class _DrawingScreenState extends State<DrawingScreen> {
 
   Future<void> _classify() async {
     if (_controller.isEmpty) {
+      // Hapus antrean SnackBar sebelumnya agar tidak menumpuk (spam)
+      ScaffoldMessenger.of(context).clearSnackBars();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Kanvas masih kosong! Yuk, tulis huruf hijaiahmu dulu di sini. ✨'),
@@ -305,11 +358,16 @@ class _DrawingScreenState extends State<DrawingScreen> {
     }
 
     if (_controller.points.length < 40) { 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Goresan terlalu pendek. Yuk, tulis yang jelas!'),
-      backgroundColor: Colors.orange,
-      duration: Duration(seconds: 2)
-      ),
-    );
+      // Hapus antrean SnackBar sebelumnya agar tidak menumpuk (spam)
+      ScaffoldMessenger.of(context).clearSnackBars();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Goresan terlalu pendek. Yuk, tulis yang jelas!'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2)
+        ),
+      );
       return;
     }
     
@@ -617,12 +675,16 @@ class _DrawingScreenState extends State<DrawingScreen> {
 
     return Scaffold(
       backgroundColor: kBgColor,
-      appBar: AppBar(
+     appBar: AppBar(
         toolbarHeight: 70, 
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: InkWell(
-            onTap: () { HapticFeedback.lightImpact(); Navigator.pop(context); },
+            onTap: () { 
+              HapticFeedback.lightImpact(); 
+              ScaffoldMessenger.of(context).clearSnackBars(); // Hapus sisa snackbar saat keluar halaman
+              Navigator.pop(context); 
+            },
             child: Container(decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: kSecondaryColor.withOpacity(0.2), blurRadius: 5)]), child: const Icon(Icons.arrow_back_rounded, color: kRedColor, size: 28)),
           ),
         ),

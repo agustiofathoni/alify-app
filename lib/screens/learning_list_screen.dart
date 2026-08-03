@@ -48,81 +48,89 @@ class LearningListScreen extends StatelessWidget {
       ),
       body: Directionality(
         textDirection: TextDirection.rtl, 
-        child: GridView.builder(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           physics: const BouncingScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3, 
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 0.85, // Diubah menjadi 0.85 agar kotaknya sedikit lebih tinggi (cukup untuk 2 baris teks)
-          ),
-          itemCount: _hijaiahList.length,
-          // Ganti bagian itemBuilder ini dengan kode berikut:
-          itemBuilder: (context, index) {
-            String char = _hijaiahList[index];
-            String name = _kHijaiahNames[char] ?? '';
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Menghitung lebar kotak agar pas 3 kolom (dikurangi jarak antar kolom 16*2 = 32)
+              double itemWidth = (constraints.maxWidth - 32) / 3;
+              // Menghitung tinggi kotak berdasarkan childAspectRatio: 0.85
+              double itemHeight = itemWidth / 0.85;
 
-            // Daftar huruf yang punya lengkungan ke bawah
-            // bool hasDescender = ['ج', 'ح', 'خ', 'ع', 'غ', 'م'].contains(char);
+              return SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.center, // KUNCI UTAMA: Menengahkan baris terakhir
+                  spacing: 16.0,
+                  runSpacing: 16.0,
+                  children: List.generate(
+                    _hijaiahList.length,
+                    (index) {
+                      String char = _hijaiahList[index];
+                      String name = _kHijaiahNames[char] ?? '';
 
-            return InkWell(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DrawingScreen(targetLetter: char, customLetterList: _hijaiahList),
-                  ),
-                );
-              },
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.teal.shade200, width: 2),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5, offset: const Offset(0, 3))
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center, // Pusatkan secara vertikal
-                  children: [
-                    // 1. WADAH TETAP (Tinggi 60px) agar semua huruf sejajar
-                    SizedBox(
-                      height: 60, 
-                      child: Center(
-                        child: Text(
-                          char,
-                          style: const TextStyle(
-                            fontFamily: 'Amiri',
-                            fontSize: 45,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange,
-                            height: 1.0,
+                      return SizedBox(
+                        width: itemWidth,
+                        height: itemHeight,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DrawingScreen(targetLetter: char, customLetterList: _hijaiahList),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.teal.shade200, width: 2),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5, offset: const Offset(0, 3))
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center, 
+                              children: [
+                                SizedBox(
+                                  height: 60, 
+                                  child: Center(
+                                    child: Text(
+                                      char,
+                                      style: const TextStyle(
+                                        fontFamily: 'Amiri',
+                                        fontSize: 45,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange,
+                                        height: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  name,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.orange.shade300,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    
-                    // 2. Jarak kecil
-                    const SizedBox(height: 4),
-                    
-                    // 3. Nama Huruf
-                    Text(
-                      name,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.orange.shade300,
-                      ),
-                    ),
-                  ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
